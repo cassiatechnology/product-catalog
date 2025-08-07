@@ -1,8 +1,9 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import asc, desc, select
+from sqlalchemy import asc, desc, func, select
 from sqlalchemy.orm import selectinload
 from app.models.category import Category
+from app.models.department import Department
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductUpdate
 
@@ -88,19 +89,6 @@ async def get_product_by_id(db: AsyncSession, product_id: int) -> Product | None
     return result.scalar_one_or_none()
 
 
-async def get_product_with_relationships(db: AsyncSession, product_id: int) -> Product | None:
-    """
-    Retrieve a product by its ID with category and department relationships loaded.
-    """
-    result = await db.execute(
-        select(Product)
-        .where(Product.id == product_id)
-        .options(selectinload(Product.category).selectinload(Category.department))
-    )
-
-    return result.scalar_one_or_none()
-
-
 async def update_product(db: AsyncSession, product_id: int, product_in: ProductUpdate) -> Product | None:
     """
     Update a product by its ID.
@@ -132,3 +120,104 @@ async def delete_product(db: AsyncSession, product_id: int) -> bool:
     await db.commit()
     
     return True
+
+async def get_product_with_relationships(db: AsyncSession, product_id: int) -> Product | None:
+    """
+    Retrieve a product by its ID with category and department relationships loaded.
+    """
+    result = await db.execute(
+        select(Product)
+        .where(Product.id == product_id)
+        .options(selectinload(Product.category).selectinload(Category.department))
+    )
+
+    return result.scalar_one_or_none()
+
+async def avg_price_by_department(db: AsyncSession) -> list[dict]:
+    """
+    Aggregate: average product price per department.
+    Returns: [{"department_id": int, "department_name": str, "avg_price": float}, ...]
+    """
+    query = (
+        select(
+            Department.id.label("department_id"),
+            Department.name.label("department_name"),
+            func.avg(Product.price).label("avg_price"),
+        )
+        .join(Category, Category.department_id == Department.id)
+        .join(Product, Product.category_id == Category.id)
+        .group_by(Department.id, Department.name)
+        .order_by(Department.id)
+    )
+
+    rows = (await db.execute(query)).all()
+    
+    return [dict(r._mapping) for r in rows]
+
+
+async def total_stock_by_category(db: AsyncSession) -> list[dict]:
+    """
+    Aggregate: total stock per category (with department for context).
+    Returns: [{"category_id": int, "category_name": str, "department_id": int, "department_name": str, "total_stock": int}, ...]
+    """
+    query = (
+        select(
+            Category.id.label("category_id"),
+            Category.name.label("category_name"),
+            Department.id.label("department_id"),
+            Department.name.label("department_name"),
+            func.coalesce(func.sum(Product.stock), 0).label("total_stock"),
+        )
+        .join(Department, Category.department_id == Department.id)
+        .join(Product, Product.category_id == Category.id)
+        .group_by(Category.id, Category.name, Department.id, Department.name)
+        .order_by(Department.id, Category.id)
+    )
+
+    rows = (await db.execute(query)).all()
+
+    return [dict(r._mapping) for r in rows]
+
+
+async def count_products_by_department(db: AsyncSession) -> list[dict]:
+    """
+    Aggregate: product count per department.
+    Returns: [{"department_id": int, "department_name": str, "product_count": int}, ...]
+    """
+    query = (
+        select(
+            Department.id.label("department_id"),
+            Department.name.label("department_name"),
+            func.count(Product.id).label("product_count"),
+        )
+        .join(Category, Category.department_id == Department.id)
+        .join(Product, Product.category_id == Category.id)
+        .group_by(Department.id, Department.name)
+        .order_by(Department.id)
+    )
+
+    rows = (await db.execute(query)).all()
+
+    return [dict(r._mapping) for r in rows]
+
+
+async def total_value_by_department(db: AsyncSession) -> list[dict]:
+    """
+    Aggregate: total inventory value per department (sum of price * stock).
+    Returns: [{"department_id": int, "department_name": str, "total_value": float}, ...]
+    """
+    query = (
+        select(
+            Department.id.label("department_id"),
+            Department.name.label("department_name"),
+            func.coalesce(func.sum(Product.price * Product.stock), 0).label("total_value"),
+        )
+        .join(Category, Category.department_id == Department.id)
+        .join(Product, Product.category_id == Category.id)
+        .group_by(Department.id, Department.name)
+        .order_by(Department.id)
+    )
+
+    rows = (await db.execute(query)).all()
+
+    return [dict(r._mapping) for r in rows]
