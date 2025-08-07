@@ -15,3 +15,9 @@ class ProductRead(ProductBase):
 
     class Config:
         from_attributes = True
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=100)
+    description: Optional[str] = None
+    price: Optional[float] = None
+    stock: Optional[int] = None
