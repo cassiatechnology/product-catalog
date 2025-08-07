@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional
+from app.schemas.category import CategoryRead
 
 class ProductBase(BaseModel):
     name: str = Field(..., max_length=100)
@@ -22,10 +23,11 @@ class ProductBase(BaseModel):
         return v
 
 class ProductCreate(ProductBase):
-    pass
+    category_id: int
 
 class ProductRead(ProductBase):
     id: int
+    category: Optional[CategoryRead] = None
 
     class Config:
         from_attributes = True
@@ -35,4 +37,4 @@ class ProductUpdate(BaseModel):
     description: Optional[str] = None
     price: Optional[float] = None
     stock: Optional[int] = None
-
+    category_id: Optional[int] = None
