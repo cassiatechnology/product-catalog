@@ -31,11 +31,7 @@ async def get_product_by_id(db: AsyncSession, product_id: int) -> Product | None
 
 
 async def update_product(db: AsyncSession, product_id: int, product_in: ProductUpdate) -> Product | None:
-    result = await db.execute(
-        select(Product).where(Product.id == product_id)
-    )
-
-    product = result.scalar_one_or_none()
+    product = await get_product_by_id(db, product_id)
 
     if not product:
         return None
@@ -46,5 +42,17 @@ async def update_product(db: AsyncSession, product_id: int, product_in: ProductU
 
     await db.commit()
     await db.refresh(product)
-    
+
     return product
+
+
+async def delete_product(db: AsyncSession, product_id: int) -> bool:
+    product = await get_product_by_id(db, product_id)
+
+    if not product:
+        return False
+    
+    await db.delete(product)
+    await db.commit()
+    
+    return True
