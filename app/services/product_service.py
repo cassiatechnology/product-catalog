@@ -1,5 +1,6 @@
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import asc, desc, select
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductUpdate
 
@@ -14,11 +15,34 @@ async def create_product(db: AsyncSession, product_in: ProductCreate) -> Product
     return product
 
 
-async def list_products(db: AsyncSession, skip: int = 0, limit: int = 10) -> list[Product]:
-    result = await db.execute(
-        select(Product).offset(skip).limit(limit)
-    )
+async def list_products(
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 10,
+    name: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    sort_by: str = "id",
+    sort_order: str = "asc"
+) -> list[Product]:
+    query = select(Product)
 
+    if name:
+        query = query.where(Product.name.ilike(f"%{name}%"))
+    if min_price is not None:
+        query = query.where(Product.price >= min_price)
+    if max_price is not None:
+        query = query.where(Product.price <= max_price)
+
+    # Dinamic sorting
+    sort_column = getattr(Product, sort_by, Product.id)
+    if sort_order == "desc":
+        query = query.order_by(desc(sort_column))
+    else:
+        query = query.order_by(asc(sort_column))
+
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
     return result.scalars().all()
 
 
@@ -54,5 +78,5 @@ async def delete_product(db: AsyncSession, product_id: int) -> bool:
     
     await db.delete(product)
     await db.commit()
-    
+
     return True

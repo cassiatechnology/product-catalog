@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import async_session
@@ -18,8 +18,29 @@ async def create(product: ProductCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/", response_model=List[ProductRead])
-async def get_all_products(skip: int = 0, limit: int = 10, db: AsyncSession = Depends(get_db)):
-    return await list_products(db, skip=skip, limit=limit)
+async def get_all_products(
+    skip: int = 0,
+    limit: int = 10,
+    name: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    sort_by: str = "id",
+    sort_order: str = "asc",
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List products with optional filters and sorting.
+    """
+    return await list_products(
+        db,
+        skip=skip,
+        limit=limit,
+        name=name,
+        min_price=min_price,
+        max_price=max_price,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
 
 
 @router.get("/{product_id}", response_model=ProductRead)
