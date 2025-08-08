@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Optional
 from app.schemas.category import CategoryRead
 
@@ -29,8 +29,7 @@ class ProductRead(ProductBase):
     id: int
     category: Optional[CategoryRead] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=100)

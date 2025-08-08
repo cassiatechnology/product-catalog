@@ -14,7 +14,6 @@ from app.services.product_service import (
     count_products_by_department,
     create_product,
     delete_product,
-    get_product_by_id,
     list_products,
     total_stock_by_category,
     total_value_by_department,
@@ -125,6 +124,7 @@ async def list_products_by_department(
     return result.scalars().all()
 
 
+@router.get("")
 @router.get("/", response_model=List[ProductRead])
 async def get_all_products(
     skip: int = 0,
@@ -221,7 +221,8 @@ async def get_product(product_id: int, db: AsyncSession = Depends(get_db)):
     }
     ```
     """
-    product = await get_product_by_id(db, product_id)
+    product = await get_product_with_relationships(db, product_id)
+
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product

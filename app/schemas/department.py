@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 class DepartmentBase(BaseModel):
     name: str
@@ -8,5 +8,4 @@ class DepartmentCreate(DepartmentBase):
 
 class DepartmentRead(DepartmentBase):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
