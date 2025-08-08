@@ -4,6 +4,8 @@ from app.api import category_routes, department_routes, product_routes
 from app.db.base import Base
 from app.db.session import engine
 
+import app.models  # noqa: F401
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
